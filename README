@@ -1,0 +1,2 @@
+Usage: python parse.py [ios|android]
+Output: output-[ios|android].csv
