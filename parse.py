@@ -1,9 +1,9 @@
-import json, csv
+import json, csv, sys
 from pprint import pprint
 
-def buildCSV(output_file_name):
+def buildCSV(output_file_name, platform):
 	# Read Firebase JSON data file
-	with open('depression-ios-data.json') as data_file:    
+	with open('depression-' + platform + '-data.json') as data_file:    
 	    data = json.load(data_file)
 
 	# Create new csv file
@@ -36,20 +36,31 @@ def buildCSV(output_file_name):
 		# Ethnicity
 		if 'ethnicity' not in user or user['ethnicity'] == 'n/a':
 		    user['ethnicity'] = None
+		else:
+			user['ethnicity'] = user['ethnicity'].lower()
+			if user['ethnicity'] == 'other asian south asian':
+				user['ethnicity'] = 'other asian/south asian'
 
 		# first generation college student
 		# correctly checking if age exists because demographic data is all or none
 		if 'firstGenerationCollege' not in user or user['age'] == None:
 			user['firstGenerationCollege'] = None
+		else:
+			if user['firstGenerationCollege'] == True or user['firstGenerationCollege'] == 'yes' or user['firstGenerationCollege'] == 'Yes':
+				user['firstGenerationCollege'] = True
+			else:
+				user['firstGenerationCollege'] = False
 
 		# Gender
 		if 'gender' not in user or user['gender'] == 'n/a':
 		    user['gender'] = None
+		else:
+			user['gender'] = user['gender'].lower()
 
 		# Location
-		if user['latitude'] == 999:
+		if 'latitude' not in user or user['latitude'] == 999 or user['latitude'] == 0.0:
 			user['latitude'] = None
-		if user['longitude'] == 999:
+		if 'longitude' not in user or user['longitude'] == 999 or user['longitude'] == 0.0:
 			user['longitude'] = None
 
 		# Theme preference
@@ -59,6 +70,8 @@ def buildCSV(output_file_name):
 		# Year in school
 		if 'yearInSchool' not in user or user['yearInSchool'] == 'n/a':
 		    user['yearInSchool'] = None
+		else:
+			user['yearInSchool'] = user['yearInSchool'].encode('utf-8')
 
 		### end filtering invalid data
 
@@ -80,15 +93,13 @@ def buildCSV(output_file_name):
 			if tests_taken[key] in test_data:
 				test = test_data[tests_taken[key]]
 				# timestamps
-				test_row = [test['startTimestamp'], test['endTimestamp']]
+				test_row = [test['startTimestamp'].replace('\'', ''), test['endTimestamp'].replace('\'', '')]
 				# scores
 				for category in SCORE_CATEGORIES:
 					if category in test['scores']:
 						test_row.append(test['scores'][category])
 					else:
 						test_row.append(None)
-				
-				print(test_row)
 
 				# test_id, user_id, user data, test data
 				row = [TEST_BASE_ID, i] + user_row + test_row
@@ -98,13 +109,14 @@ def buildCSV(output_file_name):
 
 		### end users' tests
 
-		# try:
-		# 	wr.writerow(row)
-		# except KeyError as err:
-		# 	print(user)
-		# 	print("key error: {0}".format(err))
 
-
+def main(platform):
+	buildCSV('output-' + platform, platform)
 
 if __name__ == "__main__":
-	buildCSV('output')
+	args = sys.argv
+	print(args)
+	if len(args) != 2:
+		print("Needs argument for mobile platform [android|ios]: python parse.py [ios|android]")
+		exit()
+	main(args[1])
