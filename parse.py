@@ -1,74 +1,110 @@
 import json, csv
 from pprint import pprint
 
-# Read Firebase JSON data file
-with open('depression-ios-data.json') as data_file:    
-    data = json.load(data_file)
+def buildCSV(output_file_name):
+	# Read Firebase JSON data file
+	with open('depression-ios-data.json') as data_file:    
+	    data = json.load(data_file)
 
-# Create new csv file
-output = open('output.csv', 'wb')
-wr = csv.writer(output, quoting=csv.QUOTE_NONE, delimiter=',', quotechar='')
-# HEADERS = ['id', 'age', 'college', 'ethnicity', 'firstGenerationCollege', 'gender', 'latitude', 'longitude']
-HEADERS = ['id', 'age', 'college', 'ethnicity', 'firstGenerationCollege', 'gender', 'latitude', 'longitude', 'themePreference', 'yearInSchool']
-wr.writerow(HEADERS)
+	# Create new csv file
+	output = open(output_file_name + '.csv', 'wb')
+	wr = csv.writer(output, quoting=csv.QUOTE_NONE, delimiter=',', quotechar='')
+	HEADERS = ['test_id', 'user_id', 'age', 'college', 'ethnicity', 'firstGenerationCollege', 'gender', 'latitude', 'longitude', 'themePreference', 'yearInSchool']
 
-# test_data = data['tests']
-user_data = data['users']
+	test_data = data['tests']
+	SCORE_CATEGORIES = ['anhedonia', 'appetite', 'cognition-concentration', 'energy', 'guilt', 'mood', 'psychomotor', 'red-flag', 'sleep-disturbance', 'suicide', 'familyunderstands', 'familysituation', 'culturalbackground', 'appointment', 'fearofstranger', 'adequateresources']
+	wr.writerow(HEADERS + ['startTimestamp', 'endTimestamp'] + SCORE_CATEGORIES)
 
-for i, user_id in enumerate(user_data):
-	user = user_data[user_id]
+	user_data = data['users']
 
-	### Filtering invalid data
-	# Age
-	if 'age' not in user or user['age'] == -1:
-		user['age'] = None
+	TEST_BASE_ID = len(user_data) + 500
 
-	# College
-	if 'college' not in user or user['college'] == 'n/a':
-	    user['college'] = None
-	else:
-		user['college'] = user['college'].replace(',', '')
+	for i, user_id in enumerate(user_data):
+		user = user_data[user_id]
 
-	# Ethnicity
-	if 'ethnicity' not in user or user['ethnicity'] == 'n/a':
-	    user['ethnicity'] = None
+		### Filtering invalid data
+		# Age
+		if 'age' not in user or user['age'] == -1:
+			user['age'] = None
 
-	# first generation college student
-	# correctly checking if age exists because demographic data is all or none
-	if 'firstGenerationCollege' not in user or user['age'] == None:
-		user['firstGenerationCollege'] = None
+		# College
+		if 'college' not in user or user['college'] == 'n/a':
+		    user['college'] = None
+		else:
+			user['college'] = user['college'].replace(',', '')
 
-	# Gender
-	if 'gender' not in user or user['gender'] == 'n/a':
-	    user['gender'] = None
+		# Ethnicity
+		if 'ethnicity' not in user or user['ethnicity'] == 'n/a':
+		    user['ethnicity'] = None
 
-	# Location
-	if user['latitude'] == 999:
-		user['latitude'] = None
-	if user['longitude'] == 999:
-		user['longitude'] = None
+		# first generation college student
+		# correctly checking if age exists because demographic data is all or none
+		if 'firstGenerationCollege' not in user or user['age'] == None:
+			user['firstGenerationCollege'] = None
 
-	# Theme preference
-	if 'themePreference' not in user:
-	    user['themePreference'] = 'ice'
+		# Gender
+		if 'gender' not in user or user['gender'] == 'n/a':
+		    user['gender'] = None
 
-	# Year in school
-	if 'yearInSchool' not in user or user['yearInSchool'] == 'n/a':
-	    user['yearInSchool'] = None
+		# Location
+		if user['latitude'] == 999:
+			user['latitude'] = None
+		if user['longitude'] == 999:
+			user['longitude'] = None
+
+		# Theme preference
+		if 'themePreference' not in user:
+		    user['themePreference'] = 'ice'
+
+		# Year in school
+		if 'yearInSchool' not in user or user['yearInSchool'] == 'n/a':
+		    user['yearInSchool'] = None
+
+		### end filtering invalid data
+
+		# append user demographic info to row
+		user_row = []
+		for column_title in HEADERS[2:]: # skip test_id and user_id
+			user_row.append(user[column_title])
+
+		### users' tests
+
+		user.setdefault('testIDs', None)
+		tests_taken = user['testIDs']
+		if not tests_taken:
+			continue
+
+		test_row = []
+		# for each test the user has taken
+		for key in tests_taken:
+			if tests_taken[key] in test_data:
+				test = test_data[tests_taken[key]]
+				# timestamps
+				test_row = [test['startTimestamp'], test['endTimestamp']]
+				# scores
+				for category in SCORE_CATEGORIES:
+					if category in test['scores']:
+						test_row.append(test['scores'][category])
+					else:
+						test_row.append(None)
+				
+				print(test_row)
+
+				# test_id, user_id, user data, test data
+				row = [TEST_BASE_ID, i] + user_row + test_row
+				wr.writerow(row)
+				TEST_BASE_ID += 1
 
 
-	### end filtering invalid data
+		### end users' tests
 
-	user.setdefault('testIDs', None)
+		# try:
+		# 	wr.writerow(row)
+		# except KeyError as err:
+		# 	print(user)
+		# 	print("key error: {0}".format(err))
 
 
-	tests_taken = user['testIDs']
-	row = [i]
-	for column_title in HEADERS[1:]:
-		row.append(user[column_title])
-		print(user[column_title])
-	try:
-		wr.writerow(row)
-	except KeyError as err:
-		print(user)
-		print("key error: {0}".format(err))
+
+if __name__ == "__main__":
+	buildCSV('output')
