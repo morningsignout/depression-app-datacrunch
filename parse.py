@@ -112,10 +112,10 @@ def buildCSV(output_file_name, platform):
 
 def main(platform):
 	buildCSV('output-' + platform, platform)
+	print("depression-" + platform + "-data.csv outputed")
 
 if __name__ == "__main__":
 	args = sys.argv
-	print(args)
 	if len(args) != 2:
 		print("Needs argument for mobile platform [android|ios]: python parse.py [ios|android]")
 		exit()
