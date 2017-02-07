@@ -1,2 +1,3 @@
 Usage: python parse.py [ios|android]
+Input: depression-[ios|android]-data.json
 Output: output-[ios|android].csv
